@@ -1,47 +1,73 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Coffee Shop</title>
+    <title>Coffee Shop Rate Limiting Demo</title>
     <style>
+        /* Base Variables (Light Theme) */
         :root {
             --primary-color: #6f4e37;
             --secondary-color: #e0d8c3;
+            --background-color: #f7f5f0;
+            --card-background: white;
+            --text-color: #333;
+            --border-color: #ddd;
             --danger-color: #d9534f;
             --success-color: #5cb85c;
             --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
+        /* Dark Theme Variables */
+        [data-theme="dark"] {
+            --primary-color: #e0e0e0;
+            --secondary-color: #4b3621;
+            --background-color: #1a1a1a;
+            --card-background: #2c2c2c;
+            --text-color: #f0f0f0;
+            --border-color: #444;
+            --danger-color: #ff6b6b;
+            --success-color: #79d279;
+        }
+
+        /* --- Global Styles --- */
         body {
             font-family: var(--font-family);
-            background-color: var(--secondary-color);
-            color: var(--primary-color);
+            background-color: var(--background-color);
+            color: var(--text-color);
             margin: 0;
             padding: 20px;
+            transition: background-color 0.3s, color 0.3s;
         }
 
         .container {
-            max-width: 900px;
+            max-width: 1000px;
             margin: 0 auto;
-            background-color: white;
+            background-color: var(--card-background);
             padding: 30px;
             border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
         }
 
         h1 {
             color: var(--primary-color);
             text-align: center;
-            border-bottom: 2px solid var(--secondary-color);
+            border-bottom: 2px solid var(--border-color);
             padding-bottom: 15px;
             margin-bottom: 30px;
         }
 
+        h2 {
+            color: var(--primary-color);
+            margin-top: 0;
+        }
+
+        /* --- Form Elements --- */
         .input-group,
         .actions {
             display: flex;
+            flex-wrap: wrap;
             gap: 15px;
             margin-bottom: 20px;
             align-items: center;
@@ -50,18 +76,22 @@
         label {
             font-weight: bold;
             flex-shrink: 0;
+            color: var(--text-color);
         }
 
         input[type="text"],
         select,
         input[type="number"] {
             padding: 10px;
-            border: 1px solid var(--secondary-color);
+            border: 1px solid var(--border-color);
             border-radius: 6px;
             flex-grow: 1;
-            color: var(--primary-color);
+            color: var(--text-color);
+            background-color: var(--background-color);
+            transition: border-color 0.3s;
         }
 
+        /* --- Buttons --- */
         button {
             padding: 10px 20px;
             background-color: var(--primary-color);
@@ -69,22 +99,33 @@
             border: none;
             border-radius: 6px;
             cursor: pointer;
-            transition: background-color 0.3s ease;
+            transition: background-color 0.3s ease, opacity 0.3s;
+            font-weight: bold;
         }
 
         button:hover {
-            background-color: #4b3621;
+            opacity: 0.9;
         }
 
+        .toggle-theme {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            padding: 8px 15px;
+        }
+
+        /* --- Section Styling --- */
         .section {
-            border: 1px solid var(--secondary-color);
+            border: 1px solid var(--border-color);
             padding: 20px;
             margin-top: 25px;
             border-radius: 8px;
+            background-color: var(--card-background);
+            transition: border-color 0.3s, background-color 0.3s;
         }
 
         .response-box {
-            background-color: #f9f9f9;
+            background-color: var(--background-color);
             padding: 15px;
             border-radius: 6px;
             overflow-x: auto;
@@ -93,28 +134,33 @@
             font-family: monospace;
             font-size: 0.9em;
             max-height: 300px;
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            transition: background-color 0.3s;
         }
 
+        /* --- Alert Messages --- */
         .alert {
             padding: 10px;
             border-radius: 6px;
             margin-bottom: 15px;
             text-align: center;
+            font-weight: bold;
         }
 
         .alert.error {
-            background-color: #f2dede;
-            color: var(--danger-color);
+            background-color: var(--danger-color);
+            color: white;
             border: 1px solid var(--danger-color);
         }
 
         .alert.success {
-            background-color: #dff0d8;
-            color: var(--success-color);
+            background-color: var(--success-color);
+            color: white;
             border: 1px solid var(--success-color);
         }
 
-        /* Order History Table */
+        /* --- Table Styling --- */
         table {
             width: 100%;
             border-collapse: collapse;
@@ -124,261 +170,303 @@
 
         th,
         td {
-            border: 1px solid var(--secondary-color);
-            padding: 8px;
+            border: 1px solid var(--border-color);
+            padding: 10px;
             text-align: left;
         }
 
         th {
             background-color: var(--secondary-color);
+            color: var(--text-color);
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 600px) {
+            .input-group,
+            .actions {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            button {
+                width: 100%;
+            }
+
+            .toggle-theme {
+                position: static;
+                margin-bottom: 20px;
+            }
         }
     </style>
 </head>
 
 <body>
 
-    <div class="container">
-        <h1>☕ Coffee Shop Rate Limiting Demo</h1>
+<div class="container">
+    <button class="toggle-theme" onclick="toggleTheme()">Toggle Dark/Light</button>
 
+    <h1>☕ Coffee Shop Rate Limiting Demo</h1>
+
+    <div class="section">
+        <h2>Customer Identity</h2>
         <div class="input-group">
             <label for="customerId">Customer ID:</label>
-            <input type="text" id="customerId" value="anonymous" placeholder="Enter Customer ID (e.g., vip-user)">
-            <label for="customerType">Type:</label>
+            <input type="text" id="customerId" value="test-customer-123" placeholder="Enter Customer ID (Unique Identifier)">
+
+            <label for="customerType">Tier:</label>
             <select id="customerType">
-                <option value="STANDARD">STANDARD</option>
-                <option value="VIP">VIP</option>
-                <option value="PREMIUM">PREMIUM</option>
+                <option value="GUEST">GUEST (Limit: 2/min)</option>
+                <option value="STANDARD" selected>STANDARD (Limit: 5/min)</option>
+                <option value="VIP">VIP (Limit: 20/min)</option>
             </select>
         </div>
 
         <div class="actions">
-            <button onclick="getRateLimitStatus()">Check Rate Limit Status</button>
-            <button onclick="getOrderHistory()">Get Order History</button>
+            <button onclick="getRateLimitStatus()">🚦 Check Rate Limit Status (GET /rate-limit-status)</button>
+            <button onclick="getOrderHistory()">📋 Get Order History (GET /orders)</button>
         </div>
-
-        <div id="status-message" class="alert success" style="display: none;"></div>
-
-        <div class="section">
-            <h2>Place New Order</h2>
-            <div class="input-group">
-                <label for="coffeeType">Coffee:</label>
-                <select id="coffeeType">
-                </select>
-                <label for="size">Size:</label>
-                <select id="size">
-                    <option value="SMALL">SMALL</option>
-                    <option value="MEDIUM">MEDIUM</option>
-                    <option value="LARGE">LARGE</option>
-                </select>
-                <label for="quantity">Qty:</label>
-                <input type="number" id="quantity" value="1" min="1" max="10">
-                <button onclick="placeOrder()">Place Order</button>
-            </div>
-            <div id="order-response" class="response-box">Awaiting order...</div>
-        </div>
-
-        <div class="section">
-            <h2>Order History</h2>
-            <div id="order-history-content" class="response-box">
-                <p>Click 'Get Order History' to load orders for the current Customer ID.</p>
-            </div>
-        </div>
-
     </div>
 
-    <script>
-        const API_BASE_URL = 'http://localhost:8080/api/coffee';
+    <div id="status-message" class="alert success" style="display: none;"></div>
 
-        // --- Helper Functions ---
+    <div class="section">
+        <h2>🛒 Place New Order <span style="color: var(--danger-color); font-size: 0.8em;">(RATE LIMITED)</span></h2>
+        <div class="input-group">
+            <label for="coffeeType">Coffee:</label>
+            <select id="coffeeType">
+            </select>
+            <label for="size">Size:</label>
+            <select id="size">
+                <option value="SMALL">SMALL</option>
+                <option value="MEDIUM">MEDIUM</option>
+                <option value="LARGE">LARGE</option>
+            </select>
+            <label for="quantity">Qty:</label>
+            <input type="number" id="quantity" value="1" min="1" max="10">
+            <button onclick="placeOrder()">⚡ Place Order (POST /order)</button>
+        </div>
+        <div id="order-response" class="response-box">Awaiting order response...</div>
+    </div>
 
-        function getCustomerId() {
-            return document.getElementById('customerId').value || 'anonymous';
-        }
+    <div class="section">
+        <h2>Order History</h2>
+        <div id="order-history-content" class="response-box">
+            <p>Click 'Get Order History' to load orders for the current Customer ID.</p>
+        </div>
+    </div>
 
-        function getCustomerType() {
-            return document.getElementById('customerType').value || 'STANDARD';
-        }
+</div>
 
-        function displayMessage(type, message) {
-            const statusBox = document.getElementById('status-message');
-            statusBox.className = `alert ${type}`;
-            statusBox.textContent = message;
-            statusBox.style.display = 'block';
-            setTimeout(() => statusBox.style.display = 'none', 5000);
-        }
+<script>
+    // --- Configuration ---
+    const RENDER_BASE_URL = 'https://coffee-shop-4jza.onrender.com';
+    const API_BASE_URL = `${RENDER_BASE_URL}/api/coffee`;
 
-        function formatJSON(data) {
-            return JSON.stringify(data, null, 2);
-        }
 
-        // --- API Calls ---
+    // --- Helper Functions ---
 
-        // 1. Get Menu and populate dropdown
-        async function getMenu() {
-            try {
-                const response = await fetch(`${API_BASE_URL}/menu`);
-                const data = await response.json();
-                const coffeeSelect = document.getElementById('coffeeType');
-                coffeeSelect.innerHTML = '';
+    function getCustomerId() {
+        return document.getElementById('customerId').value.trim() || 'anonymous';
+    }
 
+    function getCustomerType() {
+        return document.getElementById('customerType').value || 'STANDARD';
+    }
+
+    function displayMessage(type, message) {
+        const statusBox = document.getElementById('status-message');
+        statusBox.className = `alert ${type}`;
+        statusBox.textContent = message;
+        statusBox.style.display = 'block';
+        setTimeout(() => statusBox.style.display = 'none', 6000); // Display for 6 seconds
+    }
+
+    function formatJSON(data) {
+        return JSON.stringify(data, null, 2);
+    }
+
+    function toggleTheme() {
+        const currentTheme = document.documentElement.getAttribute('data-theme');
+        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', newTheme);
+    }
+
+    // --- API Calls ---
+
+    // 1. Get Menu and populate dropdown (Non-rate-limited)
+    async function getMenu() {
+        try {
+            const response = await fetch(`${API_BASE_URL}/menu`);
+            const data = await response.json();
+            const coffeeSelect = document.getElementById('coffeeType');
+            coffeeSelect.innerHTML = '';
+
+            if (data.menu && Array.isArray(data.menu)) {
                 data.menu.forEach(item => {
                     const option = document.createElement('option');
                     option.value = item.name;
                     option.textContent = `${item.name} ($${item.basePrice.toFixed(2)})`;
                     coffeeSelect.appendChild(option);
                 });
-            } catch (error) {
-                console.error('Failed to load menu:', error);
-                displayMessage('error', 'Could not load menu. Is the Spring Boot backend running?');
+            } else {
+                 displayMessage('error', 'Menu endpoint responded, but no menu items found.');
             }
+        } catch (error) {
+            console.error('Failed to load menu:', error);
+            displayMessage('error', `Could not load menu. Check if the backend is running at ${RENDER_BASE_URL}.`);
         }
+    }
 
-        // 2. Place Order (POST request, rate-limited)
-        async function placeOrder() {
-            const customerId = getCustomerId();
-            const customerType = getCustomerType();
-            const coffeeType = document.getElementById('coffeeType').value;
-            const size = document.getElementById('size').value;
-            const quantity = parseInt(document.getElementById('quantity').value);
+    // 2. Place Order (POST request, rate-limited)
+    async function placeOrder() {
+        const customerId = getCustomerId();
+        const customerType = getCustomerType();
+        const coffeeType = document.getElementById('coffeeType').value;
+        const size = document.getElementById('size').value;
+        const quantity = parseInt(document.getElementById('quantity').value);
 
-            const orderRequestBody = {
-                coffeeType: coffeeType,
-                size: size,
-                quantity: quantity
-            };
+        const orderRequestBody = {
+            coffeeType: coffeeType,
+            size: size,
+            quantity: quantity
+        };
 
-            try {
-                const response = await fetch(`${API_BASE_URL}/order`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Customer-Id': customerId,
-                        'X-Customer-Type': customerType
-                    },
-                    body: JSON.stringify(orderRequestBody)
-                });
+        try {
+            const response = await fetch(`${API_BASE_URL}/order`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Customer-Id': customerId,
+                    'X-Customer-Type': customerType
+                },
+                body: JSON.stringify(orderRequestBody)
+            });
 
-                const responseData = await response.json();
-                document.getElementById('order-response').textContent = formatJSON(responseData);
+            // Attempt to parse JSON response body, even on error (429)
+            const responseData = await response.json().catch(() => ({ message: `Error parsing response body.` }));
+            document.getElementById('order-response').textContent = formatJSON(responseData);
 
-                if (response.status === 200) {
-                    displayMessage('success', `Order ${responseData.orderId} placed! Total: $${responseData.totalPrice.toFixed(2)}`);
-                    getOrderHistory(); // Refresh history
-                } else if (response.status === 429) { // HTTP 429 Too Many Requests
-                    displayMessage('error', `RATE LIMIT EXCEEDED! Try again later. (Error: ${responseData.message})`);
-                } else {
-                    displayMessage('error', `Order failed: ${responseData.message}`);
-                }
-
-            } catch (error) {
-                console.error('Order request failed:', error);
-                document.getElementById('order-response').textContent = `Request Failed: ${error.message}`;
-                displayMessage('error', 'Network error or backend issue. Check the console.');
+            if (response.status === 200) {
+                displayMessage('success', `Order placed! Total: $${responseData.totalPrice.toFixed(2)}. ${customerType} tokens remaining: ${response.headers.get('X-Rate-Limit-Remaining')}`);
+                getOrderHistory();
+            } else if (response.status === 429) { // HTTP 429 Too Many Requests
+                const retryAfter = response.headers.get('Retry-After') || 'a few seconds';
+                displayMessage('error', `RATE LIMIT EXCEEDED! Next request allowed in ${retryAfter} seconds. Message: ${responseData.message}`);
+            } else {
+                displayMessage('error', `Order failed (Status ${response.status}): ${responseData.message}`);
             }
+
+        } catch (error) {
+            console.error('Order request failed:', error);
+            document.getElementById('order-response').textContent = `Request Failed: ${error.message}`;
+            displayMessage('error', 'Network error or backend issue. Check the console.');
         }
+    }
 
-        // 3. Check Rate Limit Status
-        async function getRateLimitStatus() {
-            const customerId = getCustomerId();
-            const customerType = getCustomerType();
+    // 3. Check Rate Limit Status (Non-rate-limited endpoint, but checks rate limit)
+    async function getRateLimitStatus() {
+        const customerId = getCustomerId();
+        const customerType = getCustomerType();
 
-            try {
-                const response = await fetch(`${API_BASE_URL}/rate-limit-status`, {
-                    method: 'GET',
-                    headers: {
-                        'X-Customer-Id': customerId,
-                        'X-Customer-Type': customerType
-                    }
-                });
-
-                const data = await response.json();
-                if (response.ok) {
-                    displayMessage('success', data.message);
-                } else {
-                    displayMessage('error', `Failed to get status: ${data.message}`);
+        try {
+            const response = await fetch(`${API_BASE_URL}/rate-limit-status`, {
+                method: 'GET',
+                headers: {
+                    'X-Customer-Id': customerId,
+                    'X-Customer-Type': customerType
                 }
-            } catch (error) {
-                console.error('Rate limit status request failed:', error);
-                displayMessage('error', 'Failed to connect to rate limit endpoint.');
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                // Assuming the API returns tokensRemaining and timeUntilRefillSeconds
+                const remaining = data.tokensRemaining;
+                const refillTime = data.timeUntilRefillSeconds;
+                const refillMsg = refillTime > 0 ? ` (Refills in ${refillTime}s)` : '';
+                displayMessage('success', `Status for ${customerType} (${customerId}): ${remaining} tokens remaining${refillMsg}.`);
+            } else {
+                displayMessage('error', `Failed to get status: ${data.message}`);
             }
+        } catch (error) {
+            console.error('Rate limit status request failed:', error);
+            displayMessage('error', 'Failed to connect to rate limit endpoint.');
         }
+    }
 
-        // 4. Get Order History
-        // 4. Get Order History
-        async function getOrderHistory() {
-            const customerId = getCustomerId();
-            const historyBox = document.getElementById('order-history-content');
-            historyBox.innerHTML = '<p>Loading...</p>'; // Show loading state
+    // 4. Get Order History (Non-rate-limited)
+    async function getOrderHistory() {
+        const customerId = getCustomerId();
+        const historyBox = document.getElementById('order-history-content');
+        historyBox.innerHTML = '<p>Loading order history...</p>';
 
-            try {
-                const response = await fetch(`${API_BASE_URL}/orders`, {
-                    method: 'GET',
-                    headers: {
-                        // Ensure X-Customer-Id is passed for the history check
-                        'X-Customer-Id': customerId
-                    }
-                });
-
-                // 💡 CRITICAL CHANGE: Check for non-2xx status first
-                if (!response.ok) {
-                    // Attempt to read body as text (since it failed as JSON)
-                    const errorText = await response.text();
-
-                    // Handle HTTP 429 (Too Many Requests) or other server errors
-                    if (response.status === 429) {
-                        historyBox.innerHTML = `<p class="alert error" style="margin:0;">RATE LIMITED on Order History! Server response: <strong>${errorText}</strong></p>`;
-                        displayMessage('error', 'Rate limit exceeded for history request.');
-                    } else {
-                        // Handle 403 Forbidden or other client/server errors
-                        historyBox.innerHTML = `<p class="alert error" style="margin:0;">Error loading history (Status ${response.status}): <strong>${errorText.substring(0, 100)}</strong></p>`;
-                    }
-                    // STOP further processing
-                    return;
+        try {
+            const response = await fetch(`${API_BASE_URL}/orders`, {
+                method: 'GET',
+                headers: {
+                    'X-Customer-Id': customerId
                 }
+            });
 
-                // Only attempt JSON parsing if the response status is 2xx (OK)
-                const data = await response.json();
-
-                // ... (rest of the existing logic for displaying the table)
-                if (data.totalOrders === 0) {
-                    historyBox.innerHTML = `<p>No orders found for customer ID: <strong>${customerId}</strong>.</p>`;
-                    return;
-                }
-
-                let tableHTML = `<table><thead><tr>
-                             <th>ID</th>
-                             <th>Coffee</th>
-                             <th>Size</th>
-                             <th>Qty</th>
-                             <th>Price</th>
-                             <th>Time</th>
-                         </tr></thead><tbody>`;
-
-                data.orders.forEach(order => {
-                    tableHTML += `<tr>
-                             <td>${order.orderId.substring(0, 8)}...</td>
-                             <td>${order.coffeeType}</td>
-                             <td>${order.size}</td>
-                             <td>${order.quantity}</td>
-                             <td>$${order.totalPrice.toFixed(2)}</td>
-                             <td>${new Date(order.timestamp).toLocaleTimeString()}</td>
-                         </tr>`;
-                });
-
-                tableHTML += '</tbody></table>';
-                historyBox.innerHTML = tableHTML;
-
-
-            } catch (error) {
-                console.error('Order history request failed:', error);
-                // This catch block handles network errors or JSON.parse errors from the 'data = await response.json()' line
-                historyBox.textContent = `Error loading history: ${error.message}`;
+            if (!response.ok) {
+                const errorText = await response.text();
+                historyBox.innerHTML = `<p class="alert error" style="margin:0;">Error loading history (Status ${response.status}): <strong>${errorText.substring(0, 100)}...</strong></p>`;
+                return;
             }
+
+            const data = await response.json();
+
+            if (data.totalOrders === 0 || !data.orders || data.orders.length === 0) {
+                historyBox.innerHTML = `<p>No orders found for customer ID: <strong>${customerId}</strong>.</p>`;
+                return;
+            }
+
+            let tableHTML = `<table><thead><tr>
+                         <th>ID</th>
+                         <th>Coffee</th>
+                         <th>Size</th>
+                         <th>Qty</th>
+                         <th>Price</th>
+                         <th>Time</th>
+                     </tr></thead><tbody>`;
+
+            data.orders.reverse().forEach(order => { // Reverse to show newest first
+                tableHTML += `<tr>
+                         <td>${order.orderId ? order.orderId.substring(0, 8) + '...' : 'N/A'}</td>
+                         <td>${order.coffeeType}</td>
+                         <td>${order.size}</td>
+                         <td>${order.quantity}</td>
+                         <td>$${order.totalPrice ? order.totalPrice.toFixed(2) : 'N/A'}</td>
+                         <td>${order.timestamp ? new Date(order.timestamp).toLocaleTimeString() : 'N/A'}</td>
+                     </tr>`;
+            });
+
+            tableHTML += '</tbody></table>';
+            historyBox.innerHTML = tableHTML;
+
+
+        } catch (error) {
+            console.error('Order history request failed:', error);
+            historyBox.textContent = `Error loading history: ${error.message}`;
         }
+    }
 
-        window.onload = getMenu;
+    // Initial setup
+    window.onload = () => {
+        getMenu();
+        // Try to set a unique ID for the user based on the browser session
+        if (!localStorage.getItem('demoCustomerId')) {
+            localStorage.setItem('demoCustomerId', `user-${Math.random().toString(36).substring(2, 9)}`);
+        }
+        document.getElementById('customerId').value = localStorage.getItem('demoCustomerId');
+        document.getElementById('customerType').value = localStorage.getItem('demoCustomerType') || 'STANDARD';
+    };
 
-    </script>
+    // Save selected type on change
+    document.getElementById('customerType').addEventListener('change', (e) => {
+        localStorage.setItem('demoCustomerType', e.target.value);
+    });
+
+</script>
 
 </body>
 
