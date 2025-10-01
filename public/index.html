@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coffee Shop</title>
+    <style>
+        :root {
+            --primary-color: #6f4e37;
+            --secondary-color: #e0d8c3;
+            --danger-color: #d9534f;
+            --success-color: #5cb85c;
+            --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--secondary-color);
+            color: var(--primary-color);
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: var(--primary-color);
+            text-align: center;
+            border-bottom: 2px solid var(--secondary-color);
+            padding-bottom: 15px;
+            margin-bottom: 30px;
+        }
+
+        .input-group,
+        .actions {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            align-items: center;
+        }
+
+        label {
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        input[type="text"],
+        select,
+        input[type="number"] {
+            padding: 10px;
+            border: 1px solid var(--secondary-color);
+            border-radius: 6px;
+            flex-grow: 1;
+            color: var(--primary-color);
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #4b3621;
+        }
+
+        .section {
+            border: 1px solid var(--secondary-color);
+            padding: 20px;
+            margin-top: 25px;
+            border-radius: 8px;
+        }
+
+        .response-box {
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-family: monospace;
+            font-size: 0.9em;
+            max-height: 300px;
+        }
+
+        .alert {
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .alert.error {
+            background-color: #f2dede;
+            color: var(--danger-color);
+            border: 1px solid var(--danger-color);
+        }
+
+        .alert.success {
+            background-color: #dff0d8;
+            color: var(--success-color);
+            border: 1px solid var(--success-color);
+        }
+
+        /* Order History Table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            font-size: 0.9em;
+        }
+
+        th,
+        td {
+            border: 1px solid var(--secondary-color);
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: var(--secondary-color);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <h1>☕ Coffee Shop Rate Limiting Demo</h1>
+
+        <div class="input-group">
+            <label for="customerId">Customer ID:</label>
+            <input type="text" id="customerId" value="anonymous" placeholder="Enter Customer ID (e.g., vip-user)">
+            <label for="customerType">Type:</label>
+            <select id="customerType">
+                <option value="STANDARD">STANDARD</option>
+                <option value="VIP">VIP</option>
+                <option value="PREMIUM">PREMIUM</option>
+            </select>
+        </div>
+
+        <div class="actions">
+            <button onclick="getRateLimitStatus()">Check Rate Limit Status</button>
+            <button onclick="getOrderHistory()">Get Order History</button>
+        </div>
+
+        <div id="status-message" class="alert success" style="display: none;"></div>
+
+        <div class="section">
+            <h2>Place New Order</h2>
+            <div class="input-group">
+                <label for="coffeeType">Coffee:</label>
+                <select id="coffeeType">
+                </select>
+                <label for="size">Size:</label>
+                <select id="size">
+                    <option value="SMALL">SMALL</option>
+                    <option value="MEDIUM">MEDIUM</option>
+                    <option value="LARGE">LARGE</option>
+                </select>
+                <label for="quantity">Qty:</label>
+                <input type="number" id="quantity" value="1" min="1" max="10">
+                <button onclick="placeOrder()">Place Order</button>
+            </div>
+            <div id="order-response" class="response-box">Awaiting order...</div>
+        </div>
+
+        <div class="section">
+            <h2>Order History</h2>
+            <div id="order-history-content" class="response-box">
+                <p>Click 'Get Order History' to load orders for the current Customer ID.</p>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:8080/api/coffee';
+
+        // --- Helper Functions ---
+
+        function getCustomerId() {
+            return document.getElementById('customerId').value || 'anonymous';
+        }
+
+        function getCustomerType() {
+            return document.getElementById('customerType').value || 'STANDARD';
+        }
+
+        function displayMessage(type, message) {
+            const statusBox = document.getElementById('status-message');
+            statusBox.className = `alert ${type}`;
+            statusBox.textContent = message;
+            statusBox.style.display = 'block';
+            setTimeout(() => statusBox.style.display = 'none', 5000);
+        }
+
+        function formatJSON(data) {
+            return JSON.stringify(data, null, 2);
+        }
+
+        // --- API Calls ---
+
+        // 1. Get Menu and populate dropdown
+        async function getMenu() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/menu`);
+                const data = await response.json();
+                const coffeeSelect = document.getElementById('coffeeType');
+                coffeeSelect.innerHTML = '';
+
+                data.menu.forEach(item => {
+                    const option = document.createElement('option');
+                    option.value = item.name;
+                    option.textContent = `${item.name} ($${item.basePrice.toFixed(2)})`;
+                    coffeeSelect.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Failed to load menu:', error);
+                displayMessage('error', 'Could not load menu. Is the Spring Boot backend running?');
+            }
+        }
+
+        // 2. Place Order (POST request, rate-limited)
+        async function placeOrder() {
+            const customerId = getCustomerId();
+            const customerType = getCustomerType();
+            const coffeeType = document.getElementById('coffeeType').value;
+            const size = document.getElementById('size').value;
+            const quantity = parseInt(document.getElementById('quantity').value);
+
+            const orderRequestBody = {
+                coffeeType: coffeeType,
+                size: size,
+                quantity: quantity
+            };
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/order`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Customer-Id': customerId,
+                        'X-Customer-Type': customerType
+                    },
+                    body: JSON.stringify(orderRequestBody)
+                });
+
+                const responseData = await response.json();
+                document.getElementById('order-response').textContent = formatJSON(responseData);
+
+                if (response.status === 200) {
+                    displayMessage('success', `Order ${responseData.orderId} placed! Total: $${responseData.totalPrice.toFixed(2)}`);
+                    getOrderHistory(); // Refresh history
+                } else if (response.status === 429) { // HTTP 429 Too Many Requests
+                    displayMessage('error', `RATE LIMIT EXCEEDED! Try again later. (Error: ${responseData.message})`);
+                } else {
+                    displayMessage('error', `Order failed: ${responseData.message}`);
+                }
+
+            } catch (error) {
+                console.error('Order request failed:', error);
+                document.getElementById('order-response').textContent = `Request Failed: ${error.message}`;
+                displayMessage('error', 'Network error or backend issue. Check the console.');
+            }
+        }
+
+        // 3. Check Rate Limit Status
+        async function getRateLimitStatus() {
+            const customerId = getCustomerId();
+            const customerType = getCustomerType();
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/rate-limit-status`, {
+                    method: 'GET',
+                    headers: {
+                        'X-Customer-Id': customerId,
+                        'X-Customer-Type': customerType
+                    }
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    displayMessage('success', data.message);
+                } else {
+                    displayMessage('error', `Failed to get status: ${data.message}`);
+                }
+            } catch (error) {
+                console.error('Rate limit status request failed:', error);
+                displayMessage('error', 'Failed to connect to rate limit endpoint.');
+            }
+        }
+
+        // 4. Get Order History
+        // 4. Get Order History
+        async function getOrderHistory() {
+            const customerId = getCustomerId();
+            const historyBox = document.getElementById('order-history-content');
+            historyBox.innerHTML = '<p>Loading...</p>'; // Show loading state
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/orders`, {
+                    method: 'GET',
+                    headers: {
+                        // Ensure X-Customer-Id is passed for the history check
+                        'X-Customer-Id': customerId
+                    }
+                });
+
+                // 💡 CRITICAL CHANGE: Check for non-2xx status first
+                if (!response.ok) {
+                    // Attempt to read body as text (since it failed as JSON)
+                    const errorText = await response.text();
+
+                    // Handle HTTP 429 (Too Many Requests) or other server errors
+                    if (response.status === 429) {
+                        historyBox.innerHTML = `<p class="alert error" style="margin:0;">RATE LIMITED on Order History! Server response: <strong>${errorText}</strong></p>`;
+                        displayMessage('error', 'Rate limit exceeded for history request.');
+                    } else {
+                        // Handle 403 Forbidden or other client/server errors
+                        historyBox.innerHTML = `<p class="alert error" style="margin:0;">Error loading history (Status ${response.status}): <strong>${errorText.substring(0, 100)}</strong></p>`;
+                    }
+                    // STOP further processing
+                    return;
+                }
+
+                // Only attempt JSON parsing if the response status is 2xx (OK)
+                const data = await response.json();
+
+                // ... (rest of the existing logic for displaying the table)
+                if (data.totalOrders === 0) {
+                    historyBox.innerHTML = `<p>No orders found for customer ID: <strong>${customerId}</strong>.</p>`;
+                    return;
+                }
+
+                let tableHTML = `<table><thead><tr>
+                             <th>ID</th>
+                             <th>Coffee</th>
+                             <th>Size</th>
+                             <th>Qty</th>
+                             <th>Price</th>
+                             <th>Time</th>
+                         </tr></thead><tbody>`;
+
+                data.orders.forEach(order => {
+                    tableHTML += `<tr>
+                             <td>${order.orderId.substring(0, 8)}...</td>
+                             <td>${order.coffeeType}</td>
+                             <td>${order.size}</td>
+                             <td>${order.quantity}</td>
+                             <td>$${order.totalPrice.toFixed(2)}</td>
+                             <td>${new Date(order.timestamp).toLocaleTimeString()}</td>
+                         </tr>`;
+                });
+
+                tableHTML += '</tbody></table>';
+                historyBox.innerHTML = tableHTML;
+
+
+            } catch (error) {
+                console.error('Order history request failed:', error);
+                // This catch block handles network errors or JSON.parse errors from the 'data = await response.json()' line
+                historyBox.textContent = `Error loading history: ${error.message}`;
+            }
+        }
+
+        window.onload = getMenu;
+
+    </script>
+
+</body>
+
+</html>

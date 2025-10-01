@@ -1,0 +1,34 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: coffee-shop-rate-limiter
+
+  # Redis configuration (optional - for distributed rate limiting)
+  # Uncomment if you want to use Redis
+  # redis:
+  #   host: localhost
+  #   port: 6379
+  #   timeout: 2000
+
+logging:
+  level:
+    com.example.coffeeshop: INFO
+  pattern:
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+
+# Custom rate limiter properties (optional)
+rate-limiter:
+  guest:
+    capacity: 2
+    refill-tokens: 2
+    refill-duration-minutes: 1
+  standard:
+    capacity: 5
+    refill-tokens: 5
+    refill-duration-minutes: 1
+  premium:
+    capacity: 20
+    refill-tokens: 20
+    refill-duration-minutes: 1
